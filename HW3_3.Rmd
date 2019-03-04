@@ -1,0 +1,90 @@
+---
+title: "Untitled"
+author: "Barbara Rose Hoover"
+date: "2/28/2019"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+```{r}
+library(tidyverse)
+library(tseries)
+library(forecast)
+library(sf)
+library(leaflet)
+```
+
+```{r}
+county<-read_sf(dsn = ".", layer = "california_county_shape_file") # Read data
+nps<-read_sf(dsn = ".", layer = "nps_boundary") %>% 
+  
+st_crs(county)
+st_crs(nps)=4326
+```
+
+```{r}
+county <- read_sf(dsn = ".", layer = "california_county_shape_file") %>% # Get data!
+  select(NAME, geometry)
+  #rename(Region = US_L3NAME) %>% # Rename that column to "Region"
+  st_simplify(dTolerance = 10)  # Simplify polygons (for time)
+ # st_transform(crs = 4326)
+st_crs(county) = 4326
+```
+
+
+```{r}
+nps_ca<-nps %>% 
+  filter(STATE=="CA") %>% 
+  mutate(park=)
+
+colnames(nps_ca)
+nps_ca$UNIT_CODE<-as.factor(nps_ca$UNIT_CODE)
+```
+
+```{r}
+pal<-colorFactor(rainbow, nps_ca$UNIT_CODE)
+nps_ca_map <-nps_ca %>% 
+                  leaflet() %>% 
+                  addTiles() %>% 
+                  addPolygons(fillColor = "red", #color of each polygon
+                              stroke = TRUE, #whether to outline the park boundaries,
+                              weight = 0.5, #stroke width in pixels
+                              opacity = 1, #stroke opacity 
+                              fillOpacity = 1, #the opacity of the polygons
+                              label = nps_ca$PARKNAME, #label of park when you hover over it
+                              highlightOptions = highlightOptions(color = "white", weight = 5, bringToFront = TRUE),
+                              labelOptions = labelOptions(style = list("font-weight" = "normal", padding = "3px 8px"),
+                                                          textsize = "15px",direction = "auto")#how the park name shows up when you hover over it
+                              
+                              )
+nps_ca_map
+```
+
+
+
+```{r, warning=FALSE, message=FALSE}
+factpal <- colorFactor("RdYlBu", nps_ca$UNIT_CODE)
+ 
+nps_ca %>% 
+  leaflet() %>%
+  addTiles() %>%
+  addPolygons(stroke = FALSE, 
+           # smoothFactor = 0.2, 
+            fillOpacity = 1,
+            fillColor = "red", 
+            highlight = highlightOptions(weight = 5,
+                                         color = "#666",
+                                         dashArray = "",
+                                         fillOpacity = 0.7,
+                                         bringToFront = TRUE),
+            label = nps_ca$PARKNAME,
+            labelOptions = labelOptions(style = list("font-weight" = "normal", padding = "3px 8px"),
+                           textsize = "15px",
+                           direction = "auto"))
+nps_ca$PARKNAME
+
+```
