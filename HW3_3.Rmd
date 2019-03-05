@@ -29,11 +29,10 @@ nps<-read_sf(dsn = ".", layer = "nps_boundary")
 
 nps_ca<-nps %>% 
   filter(STATE=="CA") 
-
-nps_ca$UNIT_TYPE<-as.factor(nps_ca$UNIT_TYPE)
 ```
 
 ```{r}
+nps_ca$UNIT_TYPE<-as.factor(nps_ca$UNIT_TYPE) #convert park type to factor
 factpal <- colorFactor(topo.colors(8), nps_ca$UNIT_TYPE) #choosing palette for polygon golors.
 #I chose to use the park type as the color, however this can be by individual park, or whatever you choose 
 

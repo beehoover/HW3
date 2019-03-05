@@ -1,0 +1,181 @@
+---
+title: "HW3"
+author: "Barbara Rose Hoover"
+date: "3/3/2019"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(tidyverse)
+library(tseries) #2
+library(forecast)#2
+library(readxl)#2
+
+library(sf) #3
+library(leaflet) #3
+
+library(ggplot2)#4
+```
+
+#Task 1
+
+#Task 2
+
+```{r, message=FALSE,warning=FALSE}
+truckee_flow <- read_csv("truckee_flow.csv") #read in data
+```
+
+```{r, message=FALSE,warning=FALSE }
+#remove unnecessary columns
+truckee_df <- truckee_flow %>%
+  select(year_nu, mean_va) %>% 
+  rename(year = year_nu, cfs=mean_va)
+```
+
+##Part A
+Convert to 'df_flow' to time-series data
+```{r}
+truckee_ts <- ts(truckee_df$cfs, frequency = 12, start = c(2000,1))
+```
+
+Plot 'tru_ts'
+```{r}
+plot(truckee_ts)
+```
+
+Decompose the plot for further data exploration
+```{r}
+truckee_dc <- decompose(truckee_ts)
+
+plot(truckee_dc)
+```
+
+**The time-series data for streamflow in the Truckee River displays a seasonal pattern. Streamflows are lower in the beginning of each year and steadily increase until they peak a few months later, then decreases throughout the rest of the year with minor fluctuations. The peaks in each year tend to vary and is likely due to variations in snowpack and other precipitation events.**
+
+##Part B
+
+Holt-Winters
+```{r}
+truckee_hw <-HoltWinters(truckee_ts) #Computes Holt-Winters Filtering of a given time series. Unknown parameters are determined by minimizing the squared prediction error.
+
+#tru_hw # gives more weight to more recent observations
+
+plot(truckee_hw)
+```
+
+
+
+5-year forecast of Truckee River flow
+```{r}
+truckee_fc <- forecast(truckee_hw, h = 60) # 5 year forecast... h = 60 months or 5 years
+
+plot(truckee_fc)
+```
+
+
+##Part C
+
+Visualize model residuals
+```{r}
+hist(truckee_fc$residuals)# residuals look normally distributed so model is a good fit... aka not over/under estimating
+```
+#Task 3
+
+```{r data}
+nps<-read_sf(dsn = ".", layer = "nps_boundary") #read in nps data
+
+```
+
+```{r prepare data}
+nps_ca<-nps %>% 
+  filter(STATE=="CA") #filter for state
+
+nps_ca$UNIT_TYPE<-as.factor(nps_ca$UNIT_TYPE) #convert park type to factor
+
+factpal <- colorFactor(topo.colors(8), nps_ca$UNIT_TYPE) #choosing palette for polygon golors.
+#I chose to use the park type as the color, however this can be by individual park, or whatever you choose 
+```
+
+```{r map}
+nps_ca_map <-nps_ca %>% 
+                  leaflet() %>% 
+                  addTiles() %>% 
+                  addPolygons(fillColor = ~factpal(UNIT_TYPE), #color of each polygon
+                              fillOpacity = 1, #the opacity of the polygons
+                              stroke = TRUE, #whether to outline the park boundaries,
+                              color = "black",#color of polygon boundaries 
+                              weight = 0.2, #stroke width in pixels
+                              opacity = 1, #stroke opacity 
+                              label = nps_ca$PARKNAME, #label of park when you hover over it
+                              highlightOptions = highlightOptions(color = "white", weight = 5, bringToFront = TRUE),
+                              labelOptions = labelOptions(style = list("font-weight" = "normal", padding = "3px 8px"),
+                                                          textsize = "15px",direction = "auto")) %>% #how the park name shows up when you hover over it
+
+                  addLegend("bottomright", pal = factpal, values = ~UNIT_TYPE,
+                            title = "Park Classification", 
+                            opacity = 1)
+                              
+nps_ca_map
+```
+
+#Task 4
+```{r}
+lizard<-read_csv("lter_lizard_pitfall.csv")
+```
+
+```{r}
+#data wrangling
+colnames(lizard) = lizard[47, ] #assigning column names
+lizard<-lizard[-c(1:47), ] #taking out unnecessary rows
+
+lizard_df<-lizard %>% 
+  filter(rcap!="R") %>% #taking out repeat individuals
+  filter(site=="CALI")#taking out unnecessary sites
+```
+
+1. For all lizards trapped at site ‘CALI’, do weights of male and female adult lizards differ
+significantly?
+```{r}
+#male vs female weight (g)
+lizard_weight<-lizard_df %>% 
+  filter(sex=="F"|sex=="M") %>% 
+  filter(weight!= ".") %>% 
+  #group_by(sex) %>% 
+  mutate(weight=as.numeric(weight)) %>% 
+  mutate(sex=as.factor(sex))
+
+library(plyr)
+mu <- ddply(lizard_weight, "sex", summarise, grp.mean=mean(weight))
+
+ggplot(lizard_weight, aes(x=weight, color=sex))+
+  geom_histogram(fill="white", alpha=0.5, position="identity")+
+    geom_vline(data=mu, aes(xintercept=grp.mean, color=sex),
+             linetype="dashed")+
+  theme(legend.position="top")
+```
+```{r}
+with(lizard_weight, shapiro.test(weight[sex == "F"]))
+with(lizard_weight, shapiro.test(weight[sex == "M"]))
+```
+#res.ftest <- var.test(weight ~ group, data = lizard_weight)
+#res.ftest
+```{r}
+t.test(weight ~ sex, data = lizard_weight)
+```
+
+2. For lizards trapped at the ‘CALI’ site, is there a significant difference in the proportion of
+adult male and female lizards with broken tails?
+```{r}
+lizard_tail<-lizard_df %>% 
+  filter(sex=="F"|sex=="M") %>% 
+  filter(tail!= ".") %>% 
+  select(sex, tail) %>% 
+ group_by(sex, tail) %>% 
+  summarise()
+  
+```
+
